@@ -10,6 +10,8 @@ import os
 import requests
 from bs4 import BeautifulSoup
 import HTMLParser
+import StringIO
+import cookielib
 
 from utils import *
 
@@ -26,6 +28,7 @@ def main():
 
     user_email = args.username
     user_pswd = args.password
+    cookies_file = args.cookiesfile
     course_link = args.course_url[0]
     path = args.path
     overwrite = args.overwrite
@@ -53,7 +56,7 @@ def main():
 
     session = requests.Session()
     session.get(homepage)
-    csrftoken = session.cookies['csrftoken']
+    # csrftoken = session.cookies['csrftoken']
 
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36',
@@ -63,14 +66,51 @@ def main():
         'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
         'Referer': homepage + '/login',
         'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRFToken': csrftoken,
+        # 'X-CSRFToken': csrftoken,
     }
 
     post_data = {
                 'email': user_email,
-                'password': user_pswd
+                'password':user_pswd 
                 }
     session.headers.update(headers)
+
+    def load_cookies_file(cookies_file):
+        '''
+        '''
+        cookies = StringIO.StringIO()
+        cookies.write('# Netscape HTTP Cookie File')
+        cookies.write(open(cookies_file, 'rU').read())
+        cookies.flush()
+        cookies.seek(0)
+        
+        return cookies
+    def get_cookie_jar(cookies_file):
+        cj = cookielib.MozillaCookieJar()
+        # cj = cookielib.LWPCookieJar(cookies_file)
+        # cj.load(ignore_discard=True)
+        cookies = load_cookies_file(cookies_file)
+        cj._really_load(cookies, 'StringIO.cookies', False, False)
+        
+        return cj
+
+    def find_cookies_for_class(cookies_file):
+
+        def cookies_filter(c):
+            return c.domain == ".xuetangx.com"
+
+        cj = get_cookie_jar(cookies_file)
+        new_cj = requests.cookies.RequestsCookieJar()
+        for c in filter(cookies_filter, cj):
+            new_cj.set_cookie(c)
+        return new_cj
+
+    cookies = find_cookies_for_class(cookies_file)
+     # cookies = get_cookie_jar(cookies_file)
+    session.cookies.update(cookies)
+    # session.cookies = cookies
+    
+    # new_cj.set_cookies(c)
     r = session.post(login_url, data=post_data)
     data = r.content.decode('utf-8')
     resp = json.loads(data)
