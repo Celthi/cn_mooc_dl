@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import pdb
 import json
 import logging
 import re
@@ -12,9 +13,11 @@ from bs4 import BeautifulSoup
 import HTMLParser
 import StringIO
 import cookielib
+import json
 
 from utils import *
 
+test_site = "http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware/d2b12c602c4b420b8bcc83003a035370/"
 def main():
 
     args = parse_args()
@@ -47,6 +50,7 @@ def main():
         sys.exit(0)
 
     homepage = 'https://' + m.group('site')
+    print(homepage)
     login_url = homepage + '/' + login_suffix
     dashboard = homepage + '/dashboard'
     coursename = m.group('coursename')
@@ -56,17 +60,18 @@ def main():
 
     session = requests.Session()
     session.get(homepage)
-    # csrftoken = session.cookies['csrftoken']
+    csrftoken = session.cookies['csrftoken']
+    print(csrftoken)
 
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36',
         'Accept': 'application/json, text/javascript, */*; q=0.01',
         'Accept-Language': 'zh-CN,zh;q=0.8,en;q=0.6,zh-TW;q=0.4',
         'Connection': 'keep-alive',
         'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-        'Referer': homepage + '/login',
+        'Referer': homepage,
         'X-Requested-With': 'XMLHttpRequest',
-        # 'X-CSRFToken': csrftoken,
+        'X-CSRFToken': csrftoken,
     }
 
     post_data = {
@@ -89,15 +94,15 @@ def main():
         cj = cookielib.MozillaCookieJar()
         # cj = cookielib.LWPCookieJar(cookies_file)
         # cj.load(ignore_discard=True)
-        cookies = load_cookies_file(cookies_file)
-        cj._really_load(cookies, 'StringIO.cookies', False, False)
+        # cookies = load_cookies_file(cookies_file)
+        # cj._really_load(cookies, 'StringIO.cookies', False, False)
         
         return cj
 
     def find_cookies_for_class(cookies_file):
 
         def cookies_filter(c):
-            return c.domain == ".xuetangx.com"
+            return c.domain == ".xuetangx.com" or c.domain == 'www.xuetangx.com'
 
         cj = get_cookie_jar(cookies_file)
         new_cj = requests.cookies.RequestsCookieJar()
@@ -105,32 +110,61 @@ def main():
             new_cj.set_cookie(c)
         return new_cj
 
-    cookies = find_cookies_for_class(cookies_file)
+    # cookies = find_cookies_for_class(cookies_file)
      # cookies = get_cookie_jar(cookies_file)
-    session.cookies.update(cookies)
+    with open(cookies_file) as f:
+        cookies = json.loads(f.read())
+
+    cj = requests.cookies.RequestsCookieJar()
+    # for cookie_dict in cookies:
+    # cookie_dict = cookies[1]
+    for cookie_dict in cookies:
+        for item in cookie_dict:
+            if cookie_dict[item] == True:
+                cookie_dict[item] = 'true'
+            if cookie_dict[item] == False:
+                cookie_dict[item] = 'false'
+            cookie_dict[item] = str(cookie_dict[item])
+        requests.utils.add_dict_to_cookiejar(cj,cookie_dict)
+    print(requests.utils.dict_from_cookiejar(cj))
+    print('------')
+    session.cookies.update(cj)
+
+    c = [c.name + '=' + c.value for c in cj if c.domain == '.xuetangx.com']
+    cookies_values = '; '.join(c)
+    # session.cookie_values = cookies_values
+    print(cookies_values)
+    # session.cookies = cj
     # session.cookies = cookies
     
     # new_cj.set_cookies(c)
-    r = session.post(login_url, data=post_data)
-    data = r.content.decode('utf-8')
-    resp = json.loads(data)
+    # r = session.post(login_url, data=post_data)
+    # data = r.content.decode('utf-8')
+    # resp = json.loads(data)
 
-    if not resp.get('success', False):
-        print('Problems suppling credentials to xuetangx.')
-        exit(2)
+    # if not resp.get('success', False):
+    #     print('Problems suppling credentials to xuetangx.')
+    #     exit(2)
 
     print ('Login done...')
+    print(session.cookies)
 
     print ('Parsing...', end="")
     course_urls = []
     new_url = "%s/courses/%s/courseware" % (homepage, course_id)
     course_urls.append(new_url)
     url = course_urls[0]
-    r = session.get(url)
+    url2 = 'http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware/14def9edc58e4936abd418333f899836/'
+    r = session.get(url2)
     courseware = r.content
+    with open('file.html', 'w') as file_to:
+        file_to.write(r.content)
+    # print(r.content)
     soup = BeautifulSoup(courseware)
     data = soup.find('nav',{'aria-label':'课程导航'})
 
+    print('======')
+    print(data)
     syllabus = []
 
     for week in data.find_all('div', {'class':'chapter'}):
@@ -151,31 +185,39 @@ def main():
             
             lesson_content = []
             for tab in lesson_soup.find_all('div', attrs={'class':"seq_contents tex2jax_ignore asciimath2jax_ignore"}):
-                if tab.video is not None:
-                    get_vid_url = 'https://www.xuetangx.com/videoid2source/' + tab.source.get('src')
-                    r = session.get(get_vid_url)
-                    data = r.content
-                    resp = json.loads(data)
-                    if resp['sources']!=None: 
-                        if resp['sources']['quality20']:
-                            tab_video_link = resp['sources']['quality20'][0]
-                        elif resp['sources']['quality10']:
-                            tab_video_link = resp['sources']['quality10'][0]
-                        else:
-                            print('\nATTENTION: Video Missed for \"%s\"' %lec_map[tab.get('aria-labelledby')])
-                            continue
-                    else:
-                        print('\nATTENTION: Faile to git video for \"%s\"' %lec_map[tab.get('aria-labelledby')])
-                        continue
-                    
-                    tab_title = lec_map[tab.get('aria-labelledby')]
-                    tab_subs = tab.find_all('track',attrs={'kind':'subtitles'})
-                    tab_subs_url = []
-                    for sub in tab_subs:
-                        sub_url = 'https://www.xuetangx.com' + sub.get('src')
-                        tab_subs_url.append((sub_url, sub.get('srclang')))
-                    lesson_content.append((tab_title,tab_video_link,tab_subs_url)) 
-            
+                pass
+            text = lesson_soup.body.findAll(text=re.compile(r'data-ccsource=\'(?P<source>[^\']+)'))
+            pattern = re.compile(r'data-ccsource=\'(?P<source>[^\']+)')
+            m = pattern.search(str(text[0]))
+            #####
+            # 6.1 -- D52DDC93AC16EC379C33DC5901307461
+            # http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware/5fc34545f41b41ec96243d4ead29ac6f/971c652c9736442380c616036f339027/
+            # get_vid_url = '...source'+ data-ccsource
+            ########################
+            get_vid_url = 'https://www.xuetangx.com/videoid2source/' + m.group('source')
+            r = session.get(get_vid_url)
+            data = r.content
+            resp = json.loads(data)
+            if resp['sources']!=None:
+                if resp['sources']['quality20']:
+                    tab_video_link = resp['sources']['quality20'][0]
+                elif resp['sources']['quality10']:
+                    tab_video_link = resp['sources']['quality10'][0]
+                else:
+                    print('\nATTENTION: Video Missed for \"%s\"' %lec_map[tab.get('aria-labelledby')])
+                    continue
+            else:
+                print('\nATTENTION: Faile to git video for \"%s\"' %lec_map[tab.get('aria-labelledby')])
+                continue
+
+            tab_title = lec_map[tab.get('aria-labelledby')]
+            tab_subs = tab.find_all('track',attrs={'kind':'subtitles'})
+            tab_subs_url = []
+            for sub in tab_subs:
+                sub_url = 'https://www.xuetangx.com' + sub.get('src')
+                tab_subs_url.append((sub_url, sub.get('srclang')))
+            lesson_content.append((tab_title,tab_video_link,tab_subs_url))
+
             # exclude lessons without video                           
             if lesson_content:
                 week_content.append((lesson_name, lesson_content))
