@@ -78,7 +78,7 @@ def main():
                 'email': user_email,
                 'password':user_pswd 
                 }
-    session.headers.update(headers)
+    # session.headers.update(headers)
 
     def load_cookies_file(cookies_file):
         '''
@@ -125,7 +125,7 @@ def main():
             if cookie_dict[item] == False:
                 cookie_dict[item] = 'false'
             cookie_dict[item] = str(cookie_dict[item])
-        requests.utils.add_dict_to_cookiejar(cj,cookie_dict)
+        requests.utils.add_dict_to_cookiejar(cj,{cookie_dict['name']:cookie_dict['value']})
     print(requests.utils.dict_from_cookiejar(cj))
     print('------')
     session.cookies.update(cj)
@@ -134,6 +134,7 @@ def main():
     cookies_values = '; '.join(c)
     # session.cookie_values = cookies_values
     print(cookies_values)
+    session.cookie_values = cookies_values
     # session.cookies = cj
     # session.cookies = cookies
     
@@ -155,13 +156,19 @@ def main():
     course_urls.append(new_url)
     url = course_urls[0]
     url2 = 'http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware/14def9edc58e4936abd418333f899836/'
-    r = session.get(url2)
+    url3 = 'http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware/be5b8d4fec0c4c329d19845020bc67b2/bdffcf3672da48779342d5a8a713a6ac/'
+    r = session.get(url3)
+    print(r.status_code)
+    print(r.history)
     courseware = r.content
-    with open('file.html', 'w') as file_to:
+    with open('file2.html', 'w') as file_to:
         file_to.write(r.content)
     # print(r.content)
     soup = BeautifulSoup(courseware)
     data = soup.find('nav',{'aria-label':'课程导航'})
+    if data is None:
+        print("faile to set cookie")
+        sys.exit(0)
 
     print('======')
     print(data)
