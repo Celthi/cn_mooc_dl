@@ -50,7 +50,7 @@ def main():
         sys.exit(0)
 
     homepage = 'https://' + m.group('site')
-    print(homepage)
+    # print(homepage)
     login_url = homepage + '/' + login_suffix
     dashboard = homepage + '/dashboard'
     coursename = m.group('coursename')
@@ -61,7 +61,7 @@ def main():
     session = requests.Session()
     session.get(homepage)
     csrftoken = session.cookies['csrftoken']
-    print(csrftoken)
+    # print(csrftoken)
 
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36',
@@ -126,14 +126,14 @@ def main():
                 cookie_dict[item] = 'false'
             cookie_dict[item] = str(cookie_dict[item])
         requests.utils.add_dict_to_cookiejar(cj,{cookie_dict['name']:cookie_dict['value']})
-    print(requests.utils.dict_from_cookiejar(cj))
-    print('------')
+    # print(requests.utils.dict_from_cookiejar(cj))
+    # print('------')
     session.cookies.update(cj)
 
     c = [c.name + '=' + c.value for c in cj if c.domain == '.xuetangx.com']
     cookies_values = '; '.join(c)
     # session.cookie_values = cookies_values
-    print(cookies_values)
+    # print(cookies_values)
     session.cookie_values = cookies_values
     # session.cookies = cj
     # session.cookies = cookies
@@ -148,7 +148,7 @@ def main():
     #     exit(2)
 
     print ('Login done...')
-    print(session.cookies)
+    # print(session.cookies)
 
     print ('Parsing...', end="")
     course_urls = []
@@ -156,33 +156,30 @@ def main():
     course_urls.append(new_url)
     url = course_urls[0]
     url2 = 'http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware/14def9edc58e4936abd418333f899836/'
-    url3 = 'http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware/be5b8d4fec0c4c329d19845020bc67b2/bdffcf3672da48779342d5a8a713a6ac/'
-    r = session.get(url3)
-    print(r.status_code)
+    url3 = 'http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware/5fc34545f41b41ec96243d4ead29ac6f/971c652c9736442380c616036f339027/'
+    r = session.get(url2)
+    # print(r.status_code)
     print(r.history)
     courseware = r.content
     with open('file2.html', 'w') as file_to:
         file_to.write(r.content)
-    # print(r.content)
     soup = BeautifulSoup(courseware)
     data = soup.find('nav',{'aria-label':'课程导航'})
     if data is None:
         print("faile to set cookie")
         sys.exit(0)
-
-    print('======')
-    print(data)
     syllabus = []
 
     for week in data.find_all('div', {'class':'chapter'}):
         week_name = clean_filename(week.h3.a.string)
+        print(week_name)
         week_content = []
         for lesson in week.ul.find_all('a'):
             lesson_name = lesson.p.getText()
+            print(lesson_name)
             lesson_url = homepage + lesson['href']
-
             r = session.get(lesson_url)
-            lesson_page = HTMLParser.HTMLParser().unescape(r.content.decode('utf8'))
+            lesson_page = r.content
             lesson_soup = BeautifulSoup(lesson_page)
 
             lec_map = {}
@@ -194,8 +191,16 @@ def main():
             for tab in lesson_soup.find_all('div', attrs={'class':"seq_contents tex2jax_ignore asciimath2jax_ignore"}):
                 pass
             text = lesson_soup.body.findAll(text=re.compile(r'data-ccsource=\'(?P<source>[^\']+)'))
+            if text == [] :
+                continue
+
+            # print(text)
             pattern = re.compile(r'data-ccsource=\'(?P<source>[^\']+)')
-            m = pattern.search(str(text[0]))
+            sub_pattern = re.compile(r'href=\"(?P<sub_url>[^\"]+)')
+
+            # print(text[0])
+            m = pattern.search(text[0].string)
+            sub_m = sub_pattern.search(text[0].string)
             #####
             # 6.1 -- D52DDC93AC16EC379C33DC5901307461
             # http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware/5fc34545f41b41ec96243d4ead29ac6f/971c652c9736442380c616036f339027/
@@ -208,6 +213,8 @@ def main():
             if resp['sources']!=None:
                 if resp['sources']['quality20']:
                     tab_video_link = resp['sources']['quality20'][0]
+                    print(tab_video_link)
+                    # sys.exit(0)
                 elif resp['sources']['quality10']:
                     tab_video_link = resp['sources']['quality10'][0]
                 else:
@@ -217,12 +224,11 @@ def main():
                 print('\nATTENTION: Faile to git video for \"%s\"' %lec_map[tab.get('aria-labelledby')])
                 continue
 
-            tab_title = lec_map[tab.get('aria-labelledby')]
-            tab_subs = tab.find_all('track',attrs={'kind':'subtitles'})
-            tab_subs_url = []
-            for sub in tab_subs:
-                sub_url = 'https://www.xuetangx.com' + sub.get('src')
-                tab_subs_url.append((sub_url, sub.get('srclang')))
+            tab_title = lesson_name
+            # sub_url = 'https://www.xuetangx.com' + lesson_soup.get('src')
+            # sys.exit(0)
+            tab_subs_url = homepage + sub_m.group('sub_url')
+            print(tab_subs_url)
             lesson_content.append((tab_title,tab_video_link,tab_subs_url))
 
             # exclude lessons without video                           
@@ -250,7 +256,7 @@ def main():
             for (lec_num, (lec_title, lec_video_url, lec_subtitle)) in enumerate(lesson_content):
                 lec_title = '%02d %s' %(lec_num+1, clean_filename(lec_title))
                 vfilename = os.path.join(dir, lec_title)
-                print (lec_video_url)
+                # print (lec_video_url)
                 print (vfilename + '.mp4')
                 try:
                     resume_download_file(session, lec_video_url, vfilename + '.mp4', overwrite )
