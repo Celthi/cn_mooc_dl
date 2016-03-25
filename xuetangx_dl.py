@@ -8,6 +8,8 @@ import os
 import requests
 from bs4 import BeautifulSoup
 import json
+from multiprocessing.pool import Pool
+import threading
 
 from utils import *  # This usage is not suggested
 
@@ -15,6 +17,72 @@ from utils import *  # This usage is not suggested
 test_site = ("http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware"
              "/d2b12c602c4b420b8bcc83003a035370/")
 
+args = parse_args()
+
+cookies_file = args.cookiesfile
+course_link = args.course_url[0]
+path = args.path
+overwrite = args.overwrite
+coursename = 'OS_tsinghua2'
+session = requests.session()
+def download_thread(syllabus):
+    retry_list = []
+    for (week_num, (week_name, week_content)) in enumerate(syllabus):
+        if not week_name:
+            break
+        week_num += 20
+        week_name = '%02d %s' % (week_num+1, clean_filename(week_name))
+        for (lesson_num, (lesson_name, lesson_content)) in enumerate(week_content):
+
+            lesson_name = '%02d %s' % (lesson_num+1, clean_filename(lesson_name))
+            dir = os.path.join(path, coursename, week_name, lesson_name)
+            if not os.path.exists(dir):
+                mkdir_p(dir)
+
+            for (lec_num, (lec_title, lec_video_url, lec_subtitle)) in enumerate(lesson_content):
+                lec_title = '%02d %s' %(lec_num+1, clean_filename(lec_title))
+                vfilename = os.path.join(dir, lec_title)
+                print(vfilename + '.mp4')
+                try:
+                    resume_download_file(session, lec_video_url, vfilename + '.mp4', overwrite)
+                except Exception as e:
+                    print(e)
+                    print('Error, add it to retry list')
+                    retry_list.append((lec_video_url, vfilename + '.mp4'))
+
+                for sub_url in lec_subtitle:
+                    sfilename = vfilename
+                    print(sfilename + '.srt')
+                    if not os.path.exists(sfilename + '.srt') or overwrite:
+                        try:
+                            download_file(session, sub_url, sfilename + '.srt')
+                        except Exception as e:
+                            print(e)
+                            print('Error, add it to retry list')
+                            retry_list.append((sub_url, sfilename + '.srt'))
+                            continue
+                    else:
+                        print('Already downloaded.')
+
+    retry_times = 0
+    while len(retry_list) != 0 and retry_times < 3:
+        print('%d items should be retried, retrying...' % len(retry_list))
+        retry_times += 1
+        for (url, filename) in retry_list:
+            try:
+                print(url)
+                print(filename)
+                resume_download_file(session, url, filename, overwrite)
+            except Exception as e:
+                print(e)
+                print('Error, add it to retry list')
+                continue
+
+            retry_list.remove((url, filename))
+    if len(retry_list) != 0:
+        print('%d items failed, please check it' % len(retry_list))
+    else:
+        print('All done.')
 
 def main():
 
@@ -67,9 +135,14 @@ def main():
         sys.exit(0)
     syllabus = []
 
+    count = 0
+    
     for week in data.find_all('div', {'class': 'chapter'}):
         week_name = clean_filename(week.h3.a.string)
         print(week_name)
+        count = count + 1
+        if count < 22:
+            continue
         week_content = []
         for lesson in week.ul.find_all('a'):
             lesson_name = lesson.p.getText()
@@ -130,65 +203,29 @@ def main():
         if week_content:
             syllabus.append((week_name, week_content))
 
+    with open("syllabus.txt", 'w') as syllabus_save:
+        json.dump(syllabus, syllabus_save)
     print("Done.")
 
     print("Downloading...")
 
-    retry_list = []
-    for (week_num, (week_name, week_content)) in enumerate(syllabus):
-        week_name = '%02d %s' % (week_num+1, clean_filename(week_name))
-        for (lesson_num, (lesson_name, lesson_content)) in enumerate(week_content):
+def waitForThreadRunningCompleted(maxThread= -1):
+    count = maxThread
+    #while threading.threadID
 
-            lesson_name = '%02d %s' % (lesson_num+1, clean_filename(lesson_name))
-            dir = os.path.join(path, coursename, week_name, lesson_name)
-            if not os.path.exists(dir):
-                mkdir_p(dir)
 
-            for (lec_num, (lec_title, lec_video_url, lec_subtitle)) in enumerate(lesson_content):
-                lec_title = '%02d %s' %(lec_num+1, clean_filename(lec_title))
-                vfilename = os.path.join(dir, lec_title)
-                print(vfilename + '.mp4')
-                try:
-                    resume_download_file(session, lec_video_url, vfilename + '.mp4', overwrite)
-                except Exception as e:
-                    print(e)
-                    print('Error, add it to retry list')
-                    retry_list.append((lec_video_url, vfilename + '.mp4'))
-
-                for sub_url in lec_subtitle:
-                    sfilename = vfilename
-                    print(sfilename + '.srt')
-                    if not os.path.exists(sfilename + '.srt') or overwrite:
-                        try:
-                            download_file(session, sub_url, sfilename + '.srt')
-                        except Exception as e:
-                            print(e)
-                            print('Error, add it to retry list')
-                            retry_list.append((sub_url, sfilename + '.srt'))
-                            continue
-                    else:
-                        print('Already downloaded.')
-
-    retry_times = 0
-    while len(retry_list) != 0 and retry_times < 3:
-        print('%d items should be retried, retrying...' % len(retry_list))
-        retry_times += 1
-        for (url, filename) in retry_list:
-            try:
-                print(url)
-                print(filename)
-                resume_download_file(session, url, filename, overwrite)
-            except Exception as e:
-                print(e)
-                print('Error, add it to retry list')
-                continue
-
-            retry_list.remove((url, filename))
-    if len(retry_list) != 0:
-        print('%d items failed, please check it' % len(retry_list))
-    else:
-        print('All done.')
 
 
 if __name__ == '__main__':
     main()
+    with open('syllabus.txt', 'r') as f:
+        syllabus = json.loads(f.read())
+
+    #print(syllabus)
+    #p = Pool(6)
+    #p.map(download_thread, syllabus)
+    syllabus_un = syllabus
+    for chapter in syllabus_un:
+        ss = [chapter, None]
+        t = threading.Thread(target=download_thread, kwargs={'syllabus': ss})
+        t.start()
