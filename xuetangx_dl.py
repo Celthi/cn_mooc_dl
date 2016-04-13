@@ -30,7 +30,6 @@ def download_thread(syllabus):
     for (week_num, (week_name, week_content)) in enumerate(syllabus):
         if not week_name:
             break
-        week_num += 20
         week_name = '%02d %s' % (week_num+1, clean_filename(week_name))
         for (lesson_num, (lesson_name, lesson_content)) in enumerate(week_content):
 
@@ -135,14 +134,9 @@ def main():
         sys.exit(0)
     syllabus = []
 
-    count = 0
-    
     for week in data.find_all('div', {'class': 'chapter'}):
         week_name = clean_filename(week.h3.a.string)
         print(week_name)
-        count = count + 1
-        if count < 22:
-            continue
         week_content = []
         for lesson in week.ul.find_all('a'):
             lesson_name = lesson.p.getText()
@@ -221,9 +215,6 @@ if __name__ == '__main__':
     with open('syllabus.txt', 'r') as f:
         syllabus = json.loads(f.read())
 
-    #print(syllabus)
-    #p = Pool(6)
-    #p.map(download_thread, syllabus)
     syllabus_un = syllabus
     for chapter in syllabus_un:
         ss = [chapter, None]
