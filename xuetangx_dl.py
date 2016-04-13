@@ -23,7 +23,19 @@ cookies_file = args.cookiesfile
 course_link = args.course_url[0]
 path = args.path
 overwrite = args.overwrite
-coursename = 'OS_tsinghua2'
+regex = r'(?:https?://)?(?P<site>[^/]+)/(?P<baseurl>[^/]+)/(?P<institution>[^/]+)/(?P<coursename>[^/]+)/(?P<offering>[^/]+).*'
+m = re.match(regex, course_link)  
+
+if m is None:
+    print('The URL provided is not valid for xuetangx.')
+    sys.exit(0)
+
+homepage = 'https://' + m.group('site')
+coursename = m.group('coursename')
+cookies_file = args.cookiesfile
+course_link = args.course_url[0]
+path = args.path
+overwrite = args.overwrite
 session = requests.session()
 def download_thread(syllabus):
     retry_list = []
@@ -85,22 +97,6 @@ def download_thread(syllabus):
 
 def main():
 
-    args = parse_args()
-
-    cookies_file = args.cookiesfile
-    course_link = args.course_url[0]
-    path = args.path
-    overwrite = args.overwrite
-
-    regex = r'(?:https?://)?(?P<site>[^/]+)/(?P<baseurl>[^/]+)/(?P<institution>[^/]+)/(?P<coursename>[^/]+)/(?P<offering>[^/]+).*'
-    m = re.match(regex, course_link)  
-
-    if m is None:
-        print('The URL provided is not valid for xuetangx.')
-        sys.exit(0)
-
-    homepage = 'https://' + m.group('site')
-    coursename = m.group('coursename')
 
     session = requests.Session()
 
