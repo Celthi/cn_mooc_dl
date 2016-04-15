@@ -213,6 +213,6 @@ if __name__ == '__main__':
 
     syllabus_un = syllabus
     for chapter in syllabus_un:
-        ss = [chapter, None]
+        ss = [chapter]
         t = threading.Thread(target=download_thread, kwargs={'syllabus': ss})
         t.start()
