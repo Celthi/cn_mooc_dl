@@ -11,7 +11,6 @@ import sys
 import os
 import argparse
 import re
-import zlib
 import errno
 
 class DownloadProgress(object):
@@ -235,6 +234,11 @@ def parse_args():
                         action='store',
                         default=None,
                         help='password')
+    parser.add_argument('-f',
+                        '--cookiesfile',
+                        dest='cookiesfile',
+                        default=None,
+                        help='cookiesfile')
 
     parser.add_argument('course_url',
                         action='store',
