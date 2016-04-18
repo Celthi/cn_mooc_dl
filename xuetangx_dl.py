@@ -14,6 +14,7 @@ import threading
 from utils import *  # This usage is not suggested
 
 
+# parse arguments
 args = parse_args()
 
 cookies_file = args.cookiesfile
@@ -35,7 +36,10 @@ path = args.path
 overwrite = args.overwrite
 threads = args.threads
 session = requests.session()
+
 def download_thread(syllabus):
+    '''Download videos thread'''
+
     syllabus = [syllabus]
     retry_list = []
     for (week_num, (week_name, week_content)) in enumerate(syllabus):
@@ -95,6 +99,7 @@ def download_thread(syllabus):
         print('All done.')
 
 def main():
+    '''main function to est session and parse webpage'''
 
     session = requests.Session()
 
@@ -193,14 +198,7 @@ def main():
 
     with open("syllabus.txt", 'w') as syllabus_save:
         json.dump(syllabus, syllabus_save)
-    print("Done.")
-
-
-def waitForThreadRunningCompleted(maxThread= -1):
-    count = maxThread
-    #while threading.threadID
-
-
+    print("Finish parse webpage, and get all the videos url.")
 
 
 if __name__ == '__main__':
@@ -214,4 +212,4 @@ if __name__ == '__main__':
     p.close()
     p.join()
     
-    print("Downloading...")
+    print("Downloading Complete")
