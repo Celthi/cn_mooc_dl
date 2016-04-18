@@ -38,6 +38,7 @@ path = args.path
 overwrite = args.overwrite
 session = requests.session()
 def download_thread(syllabus):
+    syllabus = [syllabus]
     retry_list = []
     for (week_num, (week_name, week_content)) in enumerate(syllabus):
         if not week_name:
@@ -165,7 +166,7 @@ def main():
             get_vid_url = 'https://www.xuetangx.com/videoid2source/' + m.group('source')
             r = session.get(get_vid_url)
             data = r.content
-            resp = json.loads(data)
+            resp = json.loads(data.decode('utf-8'))
             if resp['sources']:
                 if resp['sources']['quality20']:
                     tab_video_link = resp['sources']['quality20'][0]
@@ -197,7 +198,6 @@ def main():
         json.dump(syllabus, syllabus_save)
     print("Done.")
 
-    print("Downloading...")
 
 def waitForThreadRunningCompleted(maxThread= -1):
     count = maxThread
@@ -212,7 +212,9 @@ if __name__ == '__main__':
         syllabus = json.loads(f.read())
 
     syllabus_un = syllabus
-    for chapter in syllabus_un:
-        ss = [chapter]
-        t = threading.Thread(target=download_thread, kwargs={'syllabus': ss})
-        t.start()
+    p = Pool(10)
+    p.map(download_thread, syllabus)
+    p.close()
+    p.join()
+    
+    print("Downloading...")
