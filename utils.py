@@ -76,7 +76,7 @@ class DownloadProgress(object):
         report = '\r{0: <56} {1: >20}'.format(percent, total_speed_report)
 
         if self._finished:
-            print report
+            print (report)
         else:
             print (report + "\r"),
 
@@ -260,6 +260,12 @@ def parse_args():
                         default=False,
                         help='whether existing files should be overwritten'
                              ' (default: False)')
+    parser.add_argument('-t',
+                        '--threads',
+                        dest='threads',
+                        default=10,
+                        help='specify how many thread to download'
+                             ' (default: 10)')
     
     args = parser.parse_args()
     

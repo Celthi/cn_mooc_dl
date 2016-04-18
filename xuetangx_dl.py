@@ -14,9 +14,6 @@ import threading
 from utils import *  # This usage is not suggested
 
 
-test_site = ("http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware"
-             "/d2b12c602c4b420b8bcc83003a035370/")
-
 args = parse_args()
 
 cookies_file = args.cookiesfile
@@ -36,6 +33,7 @@ cookies_file = args.cookiesfile
 course_link = args.course_url[0]
 path = args.path
 overwrite = args.overwrite
+threads = args.threads
 session = requests.session()
 def download_thread(syllabus):
     syllabus = [syllabus]
@@ -97,7 +95,6 @@ def download_thread(syllabus):
         print('All done.')
 
 def main():
-
 
     session = requests.Session()
 
@@ -212,7 +209,7 @@ if __name__ == '__main__':
         syllabus = json.loads(f.read())
 
     syllabus_un = syllabus
-    p = Pool(10)
+    p = Pool(threads)
     p.map(download_thread, syllabus)
     p.close()
     p.join()
