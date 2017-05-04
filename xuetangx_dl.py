@@ -42,10 +42,10 @@ def download_thread(syllabus):
 
     syllabus = [syllabus]
     retry_list = []
-    for (week_num, (week_name, week_content)) in enumerate(syllabus):
+    for (_, (week_name, week_content)) in enumerate(syllabus):
         if not week_name:
             break
-        week_name = '%02d %s' % (week_num+1, clean_filename(week_name))
+        week_name = '%s' % clean_filename(week_name)
         for (lesson_num, (lesson_name, lesson_content)) in enumerate(week_content):
 
             lesson_name = '%02d %s' % (lesson_num+1, clean_filename(lesson_name))
@@ -202,7 +202,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if not os.path.exists('syllabus.txt') or overwrite: 
+        main()
     with open('syllabus.txt', 'r') as f:
         syllabus = json.loads(f.read())
 
