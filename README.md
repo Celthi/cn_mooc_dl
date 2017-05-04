@@ -5,15 +5,15 @@ cn_mooc_dl
 
 2. 清华学堂在线（`xuetangx.com`）视频下载
 
-####测试环境：   `PYTHON 2.7； WIN 10`
-####依赖包： `requests， beautifulsoup4`
+测试环境：   `PYTHON 2.7； WIN 10`
+依赖包： `requests， beautifulsoup4`
 	pip install requests
 	pip install beautifulsoup4
 或者在代码目录下
 	
 	pip install -r requirements.txt 
-
-####清华学堂在线（`xuetangx.com`）：    
+使用方法
+======
     python xuetangx_dl.py  -f cookie.txt "url"
     
 * 其中 url 是课程课件页面的浏览器地址，比如：
