@@ -7,14 +7,11 @@ cn_mooc_dl
 
 测试环境：   `PYTHON 2.7； WIN 10`
 依赖包： `requests， beautifulsoup4`
-	pip install requests
-	pip install beautifulsoup4
-或者在代码目录下
-	
-	pip install -r requirements.txt 
+
 使用方法
-======
-    python xuetangx_dl.py  -f cookie.txt "url"
+=======
+	1. pip install -r requirements.txt 
+    2. python xuetangx_dl.py  -f cookie.txt "url"
     
 * 其中 url 是课程课件页面的浏览器地址，比如：
 `http://www.xuetangx.com/courses/TsinghuaX/30240243X/2015_T1/courseware/14def9edc58e4936abd418333f899836/`
